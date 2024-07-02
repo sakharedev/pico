@@ -1,0 +1,25 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${default}",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/home/mecha/robocon/install/micro_ros_agent/include/**",
+        "/home/mecha/robocon/install/micro_ros_msgs/include/**",
+        "/home/mecha/robocon/install/custom_interfaces/include/**",
+        "/opt/ros/humble/include/**",
+        "/usr/include/**",
+        "/home/mecha/pico-sdk/src/common/pico_stdlib/include/**",
+        "libmicroros/include/**"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "gcc-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
+}

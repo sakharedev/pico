@@ -1,0 +1,611 @@
+// // Includes
+// #include <stdio.h>
+// #include <math.h>
+// #include <cmath>
+// #include <rcl/rcl.h>
+// #include <rcl/error_handling.h>
+// #include <rclc/rclc.h>
+// #include <rclc/executor.h>
+// #include <std_msgs/msg/float32.h>
+// #include <rmw_microros/rmw_microros.h>
+// #include "pico/stdlib.h"
+// #include "pico_uart_transports.h"
+
+// #include <geometry_msgs/msg/twist.h>
+
+// class CytronMD
+// {
+//     public:
+//         CytronMD(unit8_t pwm_pin, unit8_t dir_pin);
+//         void setSpeed(int16_t speed);
+// };
+
+// CytronMD::CytronMD(unit8_t pwm_pin, unit8_t dir_pin)
+// {
+//     _pwm_pin = pwm_pin;
+//     _dir_pin = dir_pin;
+//     gpio_set_function(_pwm_pin, GPIO_FUNC_PWM);
+//     gpio_set_function(_dir_pin, GPIO_FUNC_OUTPUT);
+// }
+
+// void CytronMD::setSpeed(int16_t speed)
+// {
+//     if(speed > 255)
+//     {
+//         speed = 255;
+//     }
+//     else if(speed < -255)
+//     {
+//         speed = -255;
+//     }
+
+//     if(speed >= 0)
+//     {
+//         gpio_put(_pwm_pin, speed);
+//         gpio_put(_dir_pin, 0);
+//     }
+//     else
+//     {
+//         gpio_put(_pwm_pin, -speed);
+//         gpio_put(_dir_pin, 1);
+//     }
+// }
+
+// // Constants
+// const uint ENCODER_PIN_A = 4;
+// const uint ENCODER_PIN_B = 5;
+// const int TICKS_PER_REVOLUTION = 60; // Ticks per full rotation of the encoder
+// const float WHEEL_RADIUS_CM = 2.8; // Wheel radius in cm (56 mm)
+
+// const uint MOTOR_FR_PWM = 15;
+// const uint MOTOR_FR_DIR = 14;
+
+// const uint MOTOR_FL_PWM = 13;
+// const uint MOTOR_FL_DIR = 12;
+
+// const uint MOTOR_BL_PWM = 11;
+// const uint MOTOR_BL_DIR = 10;
+
+// const uint MOTOR_BR_PWM = 9;
+// const uint MOTOR_BR_DIR = 8;
+
+// // Global Variables pub/sub/service
+// rcl_publisher_t publisher;
+// rcl_subscription_t subscriber;
+// geometry_msgs__msg__Twist cmd;
+// std_msgs__msg__Float32 msg;
+
+// // Function Prototypes
+// // void (* rclc_subscription_callback_t)(const void *);
+
+
+
+// // Function to read encoder and determine direction
+// int8_t read_encoder(uint8_t* last_state) {
+//     uint8_t current_state = (gpio_get(ENCODER_PIN_A) << 1) | gpio_get(ENCODER_PIN_B);
+//     int8_t direction = 0;
+//     uint8_t transition = (*last_state << 2) | current_state;
+
+//     switch (transition) {
+//         case 0b0001:
+//         case 0b0111:
+//         case 0b1110:
+//         case 0b1000:
+//             direction = 1; // Clockwise
+//             break;
+//         case 0b0010:
+//         case 0b0100:
+//         case 0b1101:
+//         case 0b1011:
+//             direction = -1; // Counterclockwise
+//             break;
+//     }
+
+//     *last_state = current_state; // Update last state
+//     return direction; // Return direction
+// }
+
+// // Function to calculate distance per tick in centimeters
+// float calculate_distance_per_tick_cm(float radius_cm, int ticks_per_revolution) {
+//     float circumference_cm = 2 * M_PI * radius_cm; // Circumference in cm
+//     return circumference_cm / ticks_per_revolution; // Distance per tick in cm
+// }
+
+// // Callback Function for Subscriber
+// void subscription_callback(const void * msgin)
+// {
+//     const geometry_msgs__msg__Twist * cmd = (const geometry_msgs__msg__Twist *)msgin;
+    
+//     float linear_x = cmd->linear.x;
+//     float angular_z = cmd->angular.z;
+//     float linear_y = cmd->linear.y;
+
+//     // Calculate motor speeds
+    
+
+// }
+
+// // Main function
+// int main() {
+//     stdio_init_all();
+//     rmw_uros_set_custom_transport(
+//         true,
+//         NULL,
+//         pico_serial_transport_open,
+//         pico_serial_transport_close,
+//         pico_serial_transport_write,
+//         pico_serial_transport_read
+//     );
+
+//     rcl_node_t node;
+//     rcl_allocator_t allocator = rcl_get_default_allocator();
+//     rclc_support_t support;
+//     rclc_executor_t executor;
+
+//     gpio_init(ENCODER_PIN_A);
+//     gpio_init(ENCODER_PIN_B);
+//     gpio_set_dir(ENCODER_PIN_A, GPIO_IN);
+//     gpio_set_dir(ENCODER_PIN_B, GPIO_IN);
+//     gpio_pull_up(ENCODER_PIN_A);
+//     gpio_pull_up(ENCODER_PIN_B);
+
+//     gpio_init(MOTOR_FL_PWM);
+//     gpio_init(MOTOR_FL_DIR);
+//     gpio_init(MOTOR_FR_PWM);
+//     gpio_init(MOTOR_FR_DIR);
+//     gpio_init(MOTOR_BL_PWM);
+//     gpio_init(MOTOR_BL_DIR);
+//     gpio_init(MOTOR_BR_PWM);
+//     gpio_init(MOTOR_BR_DIR);
+
+//     gpio_set_dir(MOTOR_FL_PWM, GPIO_OUT);
+//     gpio_set_dir(MOTOR_FL_DIR, GPIO_OUT);
+//     gpio_set_dir(MOTOR_FR_PWM, GPIO_OUT);
+//     gpio_set_dir(MOTOR_FR_DIR, GPIO_OUT);
+//     gpio_set_dir(MOTOR_BL_PWM, GPIO_OUT);
+//     gpio_set_dir(MOTOR_BL_DIR, GPIO_OUT);
+//     gpio_set_dir(MOTOR_BR_PWM, GPIO_OUT);
+//     gpio_set_dir(MOTOR_BR_DIR, GPIO_OUT);
+
+//     // Check if micro-ROS agent is reachable
+//     if (rmw_uros_ping_agent(1000, 120) != RCL_RET_OK) {
+//         return -1; // Exit if unreachable
+//     }
+
+//     // Initialize support, node, and publisher
+//     rclc_support_init(&support, 0, NULL, &allocator);
+//     rclc_node_init_default(&node, "pico_node", "", &support);
+//     rclc_publisher_init_default(&publisher, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), "pico_publisher");
+//     rclc_subscription_init_default(&subscriber, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist), "/cmd_vel");
+//     rclc_executor_init(&executor, &support.context, 1, &allocator);
+
+//     rcl_ret_t rc = rclc_executor_add_subscription(&executor, &subscriber, &cmd, &subscription_callback, ON_NEW_DATA);
+
+//     msg.data = 0.0;
+//     uint8_t last_state = (gpio_get(ENCODER_PIN_A) << 1) | gpio_get(ENCODER_PIN_B);
+
+//     float distance_per_tick_cm = calculate_distance_per_tick_cm(WHEEL_RADIUS_CM, TICKS_PER_REVOLUTION);
+//     float total_distance_cm = 0.0;
+
+//     // Main loop
+//     while (true) {
+//         int8_t direction = read_encoder(&last_state);
+//         total_distance_cm += direction * distance_per_tick_cm;
+//         msg.data = total_distance_cm;
+
+//         // Publish message
+//         if (rcl_publish(&publisher, &msg, NULL) != RCL_RET_OK) {
+//             printf("Error publishing message\n");
+//         }
+
+//         if(RCL_RET_OK != rc)
+//         {
+//             printf("Error in rclc_executor_add_subscription\n");
+//         }
+    
+//         rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
+//     }
+
+
+//     // Cleanup
+//     rclc_executor_fini(&executor);
+//     rcl_publisher_fini(&publisher, &node);
+//     rcl_subscription_fini(&subscriber, &node);
+//     // rcl_node_fini(&node);
+//     rclc_support_fini(&support);
+
+//     return 0;
+// }
+
+
+#include <stdio.h>
+#include <math.h>
+#include <cmath>
+#include <rcl/rcl.h>
+#include <rcl/error_handling.h>
+#include <rclc/rclc.h>
+#include <rclc/executor.h>
+#include <std_msgs/msg/float32.h>
+#include <rmw_microros/rmw_microros.h>
+#include "pico/stdlib.h"
+#include "hardware/pwm.h"
+#include "pico_uart_transports.h"
+#include <initializer_list> 
+
+#include <geometry_msgs/msg/twist.h>
+
+// Constants
+const uint ENCODER_PIN_A = 4;
+const uint ENCODER_PIN_B = 5;
+const int TICKS_PER_REVOLUTION = 60; // Ticks per full rotation of the encoder
+const float WHEEL_RADIUS_CM = 2.8; // Wheel radius in cm (56 mm)
+
+const uint MOTOR_FR_PWM = 15;
+const uint MOTOR_FR_DIR = 14;
+const uint MOTOR_FL_PWM = 13;
+const uint MOTOR_FL_DIR = 12;
+const uint MOTOR_BL_PWM = 11;
+const uint MOTOR_BL_DIR = 10;
+const uint MOTOR_BR_PWM = 9;
+const uint MOTOR_BR_DIR = 8;
+
+// Global Variables pub/sub/service
+rcl_publisher_t publisher;
+rcl_subscription_t subscriber;
+geometry_msgs__msg__Twist cmd;
+std_msgs__msg__Float32 msg;
+
+// New global variable for maximum PWM value
+uint8_t max_pwm_value = 128; // Can be changed to any value between 0 and 255
+
+// PWM configuration
+const uint PWM_WRAP = 65535;  // 16-bit PWM
+
+// Function prototypes
+void init_motor_pwm();
+void set_motor_speed(uint pwm_pin, uint dir_pin, float speed);
+float low_pass_filter(float current_value, float previous_value, float alpha);
+
+// Function to read encoder and determine direction
+int8_t read_encoder(uint8_t* last_state) {
+    uint8_t current_state = (gpio_get(ENCODER_PIN_A) << 1) | gpio_get(ENCODER_PIN_B);
+    int8_t direction = 0;
+    uint8_t transition = (*last_state << 2) | current_state;
+
+    switch (transition) {
+        case 0b0001:
+        case 0b0111:
+        case 0b1110:
+        case 0b1000:
+            direction = 1; // Clockwise
+            break;
+        case 0b0010:
+        case 0b0100:
+        case 0b1101:
+        case 0b1011:
+            direction = -1; // Counterclockwise
+            break;
+    }
+
+    *last_state = current_state; // Update last state
+    return direction; // Return direction
+}
+
+// Function to calculate distance per tick in centimeters
+float calculate_distance_per_tick_cm(float radius_cm, int ticks_per_revolution) {
+    float circumference_cm = 2 * M_PI * radius_cm; // Circumference in cm
+    return circumference_cm / ticks_per_revolution; // Distance per tick in cm
+}
+
+// Callback Function for Subscriber
+void subscription_callback(const void * msgin)
+{
+    const geometry_msgs__msg__Twist * cmd = (const geometry_msgs__msg__Twist *)msgin;
+    
+    float x = cmd->linear.x;
+    float y = -cmd->linear.y;
+    float turn = cmd->angular.z;
+    
+    float theta = std::atan2(y, x);
+    float power = std::hypot(x, y);
+
+    float sin = std::sin(theta - M_PI / 4.0);
+    float cos = std::cos(theta - M_PI / 4.0);
+    float max = std::max(std::abs(sin), std::abs(cos));
+
+    float leftfront = power * cos / max + turn;
+    float rightfront = power * sin / max - turn;
+    float leftback = power * sin / max + turn;
+    float rightback = power * cos / max - turn;
+
+    // Normalize speeds if they exceed [-1, 1] range
+    float max_speed = std::max(std::max(std::abs(leftfront), std::abs(rightfront)), std::max(std::abs(leftback), std::abs(rightback)));
+    if (max_speed > 1) {
+        leftfront /= max_speed;
+        rightfront /= max_speed;
+        leftback /= max_speed;
+        rightback /= max_speed;
+    }
+
+    // Set motor speeds using the new function
+    set_motor_speed(MOTOR_FL_PWM, MOTOR_FL_DIR, leftfront);
+    set_motor_speed(MOTOR_FR_PWM, MOTOR_FR_DIR, rightfront);
+    set_motor_speed(MOTOR_BL_PWM, MOTOR_BL_DIR, leftback);
+    set_motor_speed(MOTOR_BR_PWM, MOTOR_BR_DIR, rightback);
+}
+
+void init_motor_pwm() {
+    // Initialize PWM for all motor pins
+    gpio_set_function(MOTOR_FL_PWM, GPIO_FUNC_PWM);
+    gpio_set_function(MOTOR_FR_PWM, GPIO_FUNC_PWM);
+    gpio_set_function(MOTOR_BL_PWM, GPIO_FUNC_PWM);
+    gpio_set_function(MOTOR_BR_PWM, GPIO_FUNC_PWM);
+
+    // Configure PWM
+    for (uint pin : {MOTOR_FL_PWM, MOTOR_FR_PWM, MOTOR_BL_PWM, MOTOR_BR_PWM}) {
+        uint slice_num = pwm_gpio_to_slice_num(pin);
+        pwm_set_wrap(slice_num, PWM_WRAP);
+        pwm_set_enabled(slice_num, true);
+    }
+
+    // Configure direction pins
+    for (uint pin : {MOTOR_FL_DIR, MOTOR_FR_DIR, MOTOR_BL_DIR, MOTOR_BR_DIR}) {
+        gpio_init(pin);
+        gpio_set_dir(pin, GPIO_OUT);
+    }
+}
+
+void set_motor_speed(uint pwm_pin, uint dir_pin, float speed) {
+    // Set direction
+    gpio_put(dir_pin, speed >= 0);
+
+    // Calculate PWM value
+    uint16_t pwm_value = (uint16_t)(std::abs(speed) * max_pwm_value * (PWM_WRAP / 255.0f));
+
+    // Set PWM duty cycle
+    pwm_set_gpio_level(pwm_pin, pwm_value);
+}
+
+// Low-pass filter function to smooth out speed commands
+float low_pass_filter(float current_value, float previous_value, float alpha) {
+    return alpha * current_value + (1 - alpha) * previous_value;
+}
+
+// Main function
+int main() {
+    stdio_init_all();
+    init_motor_pwm();
+    rmw_uros_set_custom_transport(
+        true,
+        NULL,
+        pico_serial_transport_open,
+        pico_serial_transport_close,
+        pico_serial_transport_write,
+        pico_serial_transport_read
+    );
+
+    rcl_node_t node;
+    rcl_allocator_t allocator = rcl_get_default_allocator();
+    rclc_support_t support;
+    rclc_executor_t executor;
+
+    gpio_init(ENCODER_PIN_A);
+    gpio_init(ENCODER_PIN_B);
+    gpio_set_dir(ENCODER_PIN_A, GPIO_IN);
+    gpio_set_dir(ENCODER_PIN_B, GPIO_IN);
+    gpio_pull_up(ENCODER_PIN_A);
+    gpio_pull_up(ENCODER_PIN_B);
+
+    // Check if micro-ROS agent is reachable
+    if (rmw_uros_ping_agent(1000, 120) != RCL_RET_OK) {
+        return -1; // Exit if unreachable
+    }
+
+    // Initialize support, node, and publisher
+    rclc_support_init(&support, 0, NULL, &allocator);
+    rclc_node_init_default(&node, "pico_node", "", &support);
+    rclc_publisher_init_default(&publisher, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), "pico_publisher");
+    rclc_subscription_init_default(&subscriber, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist), "/cmd_vel");
+    rclc_executor_init(&executor, &support.context, 1, &allocator);
+
+    rcl_ret_t rc = rclc_executor_add_subscription(&executor, &subscriber, &cmd, &subscription_callback, ON_NEW_DATA);
+
+    msg.data = 0.0;
+    uint8_t last_state = (gpio_get(ENCODER_PIN_A) << 1) | gpio_get(ENCODER_PIN_B);
+
+    float distance_per_tick_cm = calculate_distance_per_tick_cm(WHEEL_RADIUS_CM, TICKS_PER_REVOLUTION);
+    float total_distance_cm = 0.0;
+
+    // Previous speed values for filtering
+    float prev_leftfront = 0.0;
+    float prev_rightfront = 0.0;
+    float prev_leftback = 0.0;
+    float prev_rightback = 0.0;
+
+    // Alpha value for the low-pass filter
+    float alpha = 0.1;
+
+    // Main loop
+    while (true) {
+        int8_t direction = read_encoder(&last_state);
+        total_distance_cm += direction * distance_per_tick_cm;
+        msg.data = total_distance_cm;
+
+        // Publish message
+        if (rcl_publish(&publisher, &msg, NULL) != RCL_RET_OK) {
+            printf("Error publishing message\n");
+        }
+
+        if (RCL_RET_OK != rc) {
+            printf("Error in subscription callback\n");
+        }
+
+        // Execute the subscription callback
+        rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
+
+        // Apply low-pass filter to smooth out the speed values
+        prev_leftfront = low_pass_filter(cmd.linear.x, prev_leftfront, alpha);
+        prev_rightfront = low_pass_filter(cmd.linear.y, prev_rightfront, alpha);
+        prev_leftback = low_pass_filter(cmd.angular.x, prev_leftback, alpha);
+        prev_rightback = low_pass_filter(cmd.angular.y, prev_rightback, alpha);
+
+        sleep_ms(100); // Add a small delay to control the loop rate
+    }
+
+    return 0;
+}
+
+
+
+
+
+//Includes
+
+#include <rcl/rcl.h		
+#include <rclc/rclc.h>
+#include <rclc/executor.h>
+#include <geometry_msgs/msg/twist.h>
+#include <pico/stdlib.h>
+#include <hardware/pwm.h>
+
+#define PWM_FREQ 1000
+
+// Define PWM and Direction pins for four motors
+#define PWM_PIN1 0
+#define DIR_PIN1 1
+#define PWM_PIN2 2
+#define DIR_PIN2 3
+#define PWM_PIN3 4
+#define DIR_PIN3 5
+#define PWM_PIN4 6
+#define DIR_PIN4 7
+
+// Define a speed scaling factor to reduce the motor speed
+#define SPEED_SCALING_FACTOR 0.5  // Adjust this value to reduce speed (e.g., 0.5 for half speed)
+
+rcl_subscription_t subscriber;
+geometry_msgs__msg__Twist msg;
+
+// Function to set PWM and direction
+void set_motor(uint gpio_pwm, uint gpio_dir, float speed) {
+    // Apply the speed scaling factor
+    speed *= SPEED_SCALING_FACTOR;
+
+    // Set direction
+    if (speed >= 0) {
+        gpio_put(gpio_dir, 1); // Forward
+    } else {
+        gpio_put(gpio_dir, 0); // Backward
+        speed = -speed; // Convert speed to positive for PWM
+    }
+
+    // Convert speed to PWM duty cycle
+    uint16_t duty_cycle = (uint16_t)(speed * 65535);
+    pwm_set_gpio_level(gpio_pwm, duty_cycle);
+}
+
+void cmd_vel_callback(const void * msgin) {
+    const geometry_msgs__msg__Twist * msg = (const geometry_msgs__msg__Twist *)msgin;
+
+    float Vx = msg->linear.x;
+    float Vy = msg->linear.y;
+    float ω = msg->angular.z;
+
+    // Calculate wheel speeds
+    float V1 = Vx - Vy - ω;
+    float V2 = Vx + Vy + ω;
+    float V3 = Vx + Vy - ω;
+    float V4 = Vx - Vy + ω;
+
+    // Set motor speeds and directions
+    set_motor(PWM_PIN1, DIR_PIN1, V1);
+    set_motor(PWM_PIN2, DIR_PIN2, V2);
+    set_motor(PWM_PIN3, DIR_PIN3, V3);
+    set_motor(PWM_PIN4, DIR_PIN4, V4);
+}
+
+int main() {
+    // Initialize GPIO and PWM
+    stdio_init_all();
+    gpio_init(PWM_PIN1);
+    gpio_init(DIR_PIN1);
+    gpio_init(PWM_PIN2);
+    gpio_init(DIR_PIN2);
+    gpio_init(PWM_PIN3);
+    gpio_init(DIR_PIN3);
+    gpio_init(PWM_PIN4);
+    gpio_init(DIR_PIN4);
+
+    // Set GPIO functions and directions
+    gpio_set_function(PWM_PIN1, GPIO_FUNC_PWM);
+    gpio_set_function(PWM_PIN2, GPIO_FUNC_PWM);
+    gpio_set_function(PWM_PIN3, GPIO_FUNC_PWM);
+    gpio_set_function(PWM_PIN4, GPIO_FUNC_PWM);
+
+    gpio_set_dir(DIR_PIN1, GPIO_OUT);
+    gpio_set_dir(DIR_PIN2, GPIO_OUT);
+    gpio_set_dir(DIR_PIN3, GPIO_OUT);
+    gpio_set_dir(DIR_PIN4, GPIO_OUT);
+
+    // Initialize PWM
+    uint slice_num1 = pwm_gpio_to_slice_num(PWM_PIN1);
+    uint slice_num2 = pwm_gpio_to_slice_num(PWM_PIN2);
+    uint slice_num3 = pwm_gpio_to_slice_num(PWM_PIN3);
+    uint slice_num4 = pwm_gpio_to_slice_num(PWM_PIN4);
+
+    pwm_set_wrap(slice_num1, 1250);
+    pwm_set_wrap(slice_num2, 1250);
+    pwm_set_wrap(slice_num3, 1250);
+    pwm_set_wrap(slice_num4, 1250);
+
+    pwm_set_clkdiv(slice_num1, 64.f);
+    pwm_set_clkdiv(slice_num2, 64.f);
+    pwm_set_clkdiv(slice_num3, 64.f);
+    pwm_set_clkdiv(slice_num4, 64.f);
+
+    pwm_set_gpio_level(PWM_PIN1, 0);
+    pwm_set_gpio_level(PWM_PIN2, 0);
+    pwm_set_gpio_level(PWM_PIN3, 0);
+    pwm_set_gpio_level(PWM_PIN4, 0);
+
+    pwm_set_enabled(slice_num1, true);
+    pwm_set_enabled(slice_num2, true);
+    pwm_set_enabled(slice_num3, true);
+    pwm_set_enabled(slice_num4, true);
+
+    // Initialize the micro-ROS allocator
+    rcl_allocator_t allocator = rcl_get_default_allocator();
+
+    // Create init_options
+    rclc_support_t support;
+    rclc_support_init(&support, 0, NULL, &allocator);
+
+    // Create node
+    rcl_node_t node;
+    rclc_node_init_default(&node, "pico_node", "", &support);
+
+    // Create subscriber
+    rclc_subscription_init_default(
+        &subscriber,
+        &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
+        "/cmd_vel");
+
+    // Create executor
+    rclc_executor_t executor;
+    rclc_executor_init(&executor, &support.context, 1, &allocator);
+    rclc_executor_add_subscription(&executor, &subscriber, &msg, &cmd_vel_callback, ON_NEW_DATA);
+
+    // Spin
+    while (true) {
+        rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100));
+        sleep_ms(100);
+    }
+
+    // Cleanup
+    rcl_subscription_fini(&subscriber, &node);
+    rcl_node_fini(&node);
+
+    return 0;
+}
+
