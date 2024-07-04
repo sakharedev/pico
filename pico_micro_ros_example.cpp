@@ -812,18 +812,18 @@ void cmd_vel_callback(const void * msgin)
 
     else if(angular_z > 0.0)
     {
-        val1 = 300;
-        val2 = -300;
-        val3 = -300;
-        val4 = 300;
+        val1 = 600;
+        val2 = -600;
+        val3 = -600;
+        val4 = 600;
     }
 
     else if(angular_z < 0.0)
     {
-        val1 = -300;
-        val2 = 300;
-        val3 = 300;
-        val4 = -300;
+        val1 = -600;
+        val2 = 600;
+        val3 = 600;
+        val4 = -600;
     }
 
     else
