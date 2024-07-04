@@ -691,7 +691,8 @@ const float FINAL_DISTANCE_CM = 50.0;     // Final forward distance after last t
 float distance_per_tick_cm;
 float total_distance_cm;
 
-rcl_subscription_t subscriber;
+rcl_subscription_t subscriber_line;
+rcl_subscription_t subscriber_ball;
 rcl_publisher_t publisher;
 geometry_msgs__msg__Twist cmd;
 std_msgs__msg__Float32 msg;
@@ -841,6 +842,26 @@ void cmd_vel_callback(const void * msgin)
     set_motor(PWM_PIN_BR, DIR_PIN_BR, val4);
 }
 
+void cmd_vel_callback_ball(const void * msgin)
+{
+    const geometry_msgs__msg__Twist * cmd = (const geometry_msgs__msg__Twist *)msgin;
+    float Vx = cmd->linear.x;
+    float Vy = cmd->linear.y;
+    float W = cmd->angular.z;
+
+    // Calculate the wheel speeds
+    float V1 = Vx - Vy - W;
+    float V2 = Vx + Vy + W;
+    float V3 = Vx + Vy - W;
+    float V4 = Vx - Vy + W;
+
+    // Set Motor Speed and Directions
+    set_motor(PWM_PIN_FR, DIR_PIN_FR, V1);
+    set_motor(PWM_PIN_FL, DIR_PIN_FL, V2);
+    set_motor(PWM_PIN_BL, DIR_PIN_BL, V3);
+    set_motor(PWM_PIN_BR, DIR_PIN_BR, V4);
+}
+
 int main()
 {
     // Initialize GPIO and PWM
@@ -929,10 +950,16 @@ int main()
 
     // Create subscriber
     rclc_subscription_init_default(
-        &subscriber,
+        &subscriber_line,
         &node,
         ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
-        "/cmd_vel");
+        "/cmd_vel/line");
+    
+    rclc_subscription_init_default(
+        &subscriber_ball,
+        &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
+        "/cmd_vel/ball");
 
     rclc_publisher_init_default(
         &publisher,
@@ -942,8 +969,9 @@ int main()
 
     // Create executor
     rclc_executor_t executor;
-    rclc_executor_init(&executor, &support.context, 1, &allocator);
-    rclc_executor_add_subscription(&executor, &subscriber, &cmd, &cmd_vel_callback, ON_NEW_DATA);
+    rclc_executor_init(&executor, &support.context, 2, &allocator);
+    rclc_executor_add_subscription(&executor, &subscriber_line, &cmd, &cmd_vel_callback, ON_NEW_DATA);
+    rclc_executor_add_subscription(&executor, &subscriber_ball, &cmd, &cmd_vel_callback_ball, ON_NEW_DATA);
 
     msg.data = 0.0;
     // uint8_t last_state = (gpio_get(ENCODER_PIN_A) << 1) | gpio_get(ENCODER_PIN_B);
@@ -966,7 +994,8 @@ int main()
     }
 
     // Cleanup
-    rcl_subscription_fini(&subscriber, &node);
+    rcl_subscription_fini(&subscriber_line, &node);
+    rcl_subscription_fini(&subscriber_ball, &node); 
     rcl_node_fini(&node);
 
     return 0;
